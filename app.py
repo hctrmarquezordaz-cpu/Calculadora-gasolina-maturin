@@ -4,15 +4,24 @@ from bs4 import BeautifulSoup
 import urllib3
 import pandas as pd
 
-# Configuración de la página para dispositivos móviles y escritorio
+import streamlit as st
+import requests
+from bs4 import BeautifulSoup
+import urllib3
+import pandas as pd
+
+# ---------------------------------------------------------
+# CONFIGURACIÓN DE LA PÁGINA
+# Aquí cambiamos el icono de la pestaña (page_icon)
+# ---------------------------------------------------------
 st.set_page_config(
     page_title="Gasolina VZLA - Calculadora BCV",
-    page_icon="⛽",
+    page_icon="🚗", # <--- NUEVO ICONO AQUÍ (Pestaña)
     layout="centered"
 )
 
-# Estilo personalizado para mejorar la visibilidad en el sol (estaciones de servicio)
-st.markdown('''
+# Estilo personalizado para dispositivos móviles
+st.markdown("""
     <style>
     .main {
         background-color: #f8f9fa;
@@ -24,12 +33,12 @@ st.markdown('''
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
     </style>
-    ''', unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
-# Desactivar advertencias de SSL para el portal del BCV
+# Desactivar advertencias de SSL
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-@st.cache_data(ttl=3600) # Caché por 1 hora para no saturar el BCV
+@st.cache_data(ttl=3600) # Caché por 1 hora
 def obtener_tasa_bcv():
     url = "https://www.bcv.org.ve/"
     headers = {
@@ -38,7 +47,6 @@ def obtener_tasa_bcv():
     try:
         respuesta = requests.get(url, headers=headers, verify=False, timeout=15)
         soup = BeautifulSoup(respuesta.text, 'html.parser')
-        # Buscar el contenedor de Dólar
         dolar_div = soup.find('div', id='dolar')
         if dolar_div:
             tasa_texto = dolar_div.find('strong').text.strip()
@@ -48,7 +56,8 @@ def obtener_tasa_bcv():
     return None
 
 # Título y encabezado
-st.title("⛽ Gasolina VZLA")
+# Aquí cambiamos el icono junto al título
+st.title("🚗 Gasolina VZLA") # <--- NUEVO ICONO AQUÍ (Título)
 st.subheader("Calculadora de Pago (Tasa BCV)")
 
 tasa = obtener_tasa_bcv()
@@ -59,7 +68,16 @@ if tasa:
     # Sección de entrada
     col_input, col_info = st.columns([2, 1])
     with col_input:
-        litros = st.number_input("Cantidad de litros:", min_value=0.1, max_value=200.0, value=40.0, step=1.0)
+        # -------------------------------------------------
+        # CANTIDAD PREDETERMINADA: value=1.0
+        # -------------------------------------------------
+        litros = st.number_input(
+            "Cantidad de litros:", 
+            min_value=0.1, 
+            max_value=200.0, 
+            value=1.0, # <--- AHORA ES 1 LITRO POR DEFECTO
+            step=1.0
+        )
     with col_info:
         precio_fijo = st.text_input("Precio/Litro (USD):", value="0.50", disabled=True)
     
@@ -75,7 +93,7 @@ if tasa:
     with c2:
         st.metric(label="Total a pagar (Bolívares)", value=f"Bs. {total_bs:.2f}")
     
-    # Tabla de referencia rápida para Maturín o cualquier otra ciudad
+    # Tabla de referencia rápida
     st.markdown("### 📊 Tabla de Referencia Rápida")
     referencias = [10, 20, 30, 40, 50, 60]
     data_ref = {
@@ -89,11 +107,12 @@ else:
     st.error("⚠️ No se pudo obtener la tasa automática del BCV.")
     tasa_manual = st.number_input("Introduzca la tasa manualmente para calcular:", min_value=0.0, format="%.2f")
     if tasa_manual > 0:
-        litros = st.number_input("Cantidad de litros:", min_value=0.1, value=40.0)
+        litros = st.number_input("Cantidad de litros:", min_value=0.1, value=1.0)
         st.info(f"Total: $ {litros*0.50:.2f} / Bs. {litros*0.50*tasa_manual:.2f}")
 
 st.markdown("---")
-st.caption("Nota: Los datos se actualizan automáticamente desde el sitio oficial del BCV.")
+st.caption("Nota: Los datos se actualizan automáticamente desde el sitio oficial del BCV. Asegúrese de tener conexión a datos móviles.")
 if st.button("🔄 Actualizar Tasa"):
     st.cache_data.clear()
     st.rerun()
+    
